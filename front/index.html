@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<style type="text/css">
+	*{
+		font-family: monospace;
+	}
+	p{
+		margin:0;
+	}
+	#input{
+	position: fixed;
+    bottom: 0;
+    width: 100%;
+    height: 20%;
+    margin: 0 auto;
+	}
+	#input div{
+		display: block;
+		margin: 0 auto;
+		width: 50%;
+	}
+	#input div input {
+		float: left;
+		width: 300px;
+		height: 50px;
+		border: 1px solid #aaa;
+	}
+	#input div button{
+		border: 1px solid #aaa;
+		float: left;
+		width: 100px;
+		height: 50px;
+	}
+</style>
+<title>MMO | SocketMMO</title>
+</head>
+<body>
+
+	socketDebugger
+	<div id="debug"></div>
+	<div id="input">
+	<div>
+		<input type="text" value="送信">
+		<button type="button" name="send">送信</button>
+		</div>
+	</div>
+</body>
+
+</html>
+
+
+
+<script type="text/javascript">
+//-------------------------------------------------------------
+//define
+//-------------------------------------------------------------
+var HOST =  location.origin.replace(/^http/, 'ws');
+
+//-------------------------------------------------------------
+//global
+//-------------------------------------------------------------
+var websocket;
+
+//-------------------------------------------------------------
+//class
+//-------------------------------------------------------------
+
+	function getByteLength(str){
+  		str = (str==null)?"":str;
+  		return encodeURI(str).replace(/%../g, "*").length;
+	}
+	class Debug {
+		static setTarget(target){
+			this.target = target;
+		}
+		static log(log,color = "#000000"){
+			if(this.target === undefined || this.target === null){
+				this.target = document.body;
+			}
+			this.target.innerHTML +='<p style = " color: '+ color +' ">' + log + '</p>';
+		}
+
+	}
+//-------------------------------------------------------------
+//functions
+//-------------------------------------------------------------
+//古い端末ではなぜかstaticめそっどしか使えないのでクラス化は断念(おそらくECMA2015に対応していない)
+
+//callback
+	function onOpen(event){
+		var req = {};
+		req.name = "test";
+		sendJSON('connect',req);
+		Debug.log("connect.","#FF8C00");
+	}
+	function onMessage(event){
+		var res = JSON.parse(event.data);
+
+		console.log(event);
+        Debug.log("message : " + event.data + " size :" + getByteLength(event.data) + "byte");
+	}
+	function onError(event){
+		Debug.log("error");
+	}
+//request
+	function sendJSON(type,data){
+		var obj = {};
+		obj.type = type;
+		obj.data = data;
+		var message = JSON.stringify(obj);
+		websocket.send(message);
+		Debug.log("send : " + message);
+		
+	}
+	function reqEntry(name){
+		
+	}
+
+	function Init(){
+		Debug.log("request connect");
+		websocket = new WebSocket(HOST);
+		websocket.onopen = onOpen;
+		websocket.onmessage = onMessage;
+		websocket.onerror = onError;
+		Debug.log("web socket server address : " + HOST);
+
+	}
+//-------------------------------------------------------------
+//entry
+//-------------------------------------------------------------
+ 	Debug.setTarget(document.getElementById("debug"));
+	Debug.log("request connect b");
+	window.onload = function() {
+ 
+    	Init();
+	//var mc = new MatchingClient(HOST);
+	//Debug.log(JSON.stringify(mc));
+	//Debug.log(mc.reqConnect);
+	//Debug.log(MatchingClient.reqConnect);
+	//Debug.log(MatchingClient.test);
+	}
+	/*
+	class MatchingClient extends WebSocket{
+		constructor(address){
+			super(address);
+			
+			this.address = address;
+			//es6対応
+			//this.
+		}
+		reqConnect(){
+			Debug.log("request connect");
+			if(this.address === null){
+				return;
+			}
+			this.onopen = this.onOpen;
+			this.onmessage = this.onMessage;
+			this.onerror = this.onError;
+			Debug.log("connecting...");
+		}
+		onOpen(event){
+			var req = {};
+			req.name = "test";
+
+			this.sendJSON('connect',req);
+			console.log(event);
+			Debug.log("connect.","#FF8C00");
+		}
+		onMessage(event){
+			var res = JSON.parse(event.data);
+
+			console.log(event);
+            Debug.log("message : " + event.data + " size :" + getByteLength(event.data) + "byte");
+		}
+		onError(event){
+			Debug.log("error");
+		}
+		sendJSON(type,data){
+			var obj = {};
+			obj.type = type;
+			obj.data = data;
+			var message = JSON.stringify(obj);
+			this.send(message);
+			Debug.log("send : " + message);
+		}
+
+	}*/
+
+	
+
+</script>
