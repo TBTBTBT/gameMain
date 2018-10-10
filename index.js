@@ -1,31 +1,10 @@
 var Connection = require('connection');
 var HTTPserver = require('./client.js');
+var Game = require('./game.js')
 //GlobalDefine
 var WS_PORT = 3000;
 
 
-class ClientFormat{
-	constructor(client,state){
-		this.client = client;
-		this._state = '';		
-		this.room = '';
-	}
-
-	set state(val) {
-    	console.log('[ client ]state=' + val);
-    	this._state = val;
-  	}
-  	get state(){
-  		return this._state
-  	}
-}
-class ResponseFormat{
-	constructor(){
-		this.response ={
-
-		};
-	}
-}
 //---------------------------------------------------------------------
 //MatchingServer
 //抽象化したい関数を上から順に書く
@@ -37,40 +16,15 @@ class ResponseFormat{
 //wait    マッチング待ち
 //match   マッチング
 //exit    マッチング情報送信後
-class MatchingServer extends Connection{
+class GameServer extends Connection{
 //---------------------------------------------------------------------
-//マッチングロジック
-	matchingLogic(clients){
-		var group = [];
-		var num = 2;
-		group.push([]);
-		for (var id in clients){
-			if(clients[id].state == 'wait'){
-				if(group[group.length - 1].length < num){
-						group[group.length - 1].push(id);
-				}
-				else{
-					group.push([id]);
-				}
-
-			}
-		}
-		
-		for (var i = 0 ; i < group.length; i ++){
-			if(group[i].length == num){
-			var roomId = group[i][0];
-				for (var j = 0 ; j < group[i].length; j ++){
-					clients[group[i][j]].state = 'match';
-					clients[group[i][j]].room  = roomId;
-				}
-			}
-		}
-
-
-
-
-		//console.log(group);
-		console.log("[ update ] group make " + group.length);
+//constructor
+	constructor(data){
+		super(data);
+		this.clients = {};
+		this.rooms= {};
+		this.responseDefine();
+		//this.startUpdate();
 	}
 //---------------------------------------------------------------------
 //responseDefine
@@ -81,35 +35,87 @@ class MatchingServer extends Connection{
 		}
 	}
 //---------------------------------------------------------------------
+//response for request from server
+//サーバーからのリクエストのレスポンス
+
+	sresMakeRoom(room){
+		//新規部屋作成
+		self.rooms[room] = new Game();
+		console.log('[ sreq  ] make room :' + room);
+	}
+
+//---------------------------------------------------------------------
 //response
+//クライアントからのメッセージを処理する
 	resConnect(self,id,data){
 		var name = data.name;
+		var room = data.room;
 
+		if(room === undefined || room == ''){
+			//不正アクセス(部屋名なし)制限
+			return;
+		}
+		if(!self.rooms[room]){
+			return;
+		}
+		self.clients[id].state = 'entry';
+		self.rooms[room].playerEntry(id);
 		console.log('[ client ] entry named :' + name);
-		self.clients[id].state = 'entry';
 	}
-	resEntry(self,id,data){
-		
-		self.clients[id].state = 'entry';
-	}
-//---------------------------------------------------------------------
-//constructor
-	constructor(data){
-		super(data);
-		this.clients = {};
-		this.responseDefine();
-		//this.startUpdate();
-	}
-
 
 //---------------------------------------------------------------------
 //request
-
+//サーバーから呼びかける
 	/*
 	reqRollCall(){
 		//closeでまかなえなかった場合に作成する
 		this.broadcastRollCall();
 	}*/
+//---------------------------------------------------------------------
+//send
+	sendConnectionCallback(id,client){
+		var send = {};
+		send.type = 'connect';
+		send.data = {};
+		send.data.id = id;
+		super.send(client,JSON.stringify(send));
+	}
+//---------------------------------------------------------------------
+//updateTrigger (bool)
+	isUpdateStart(){
+		var isStart = Object.keys(this.clients).length > 1;
+		return isStart;
+	}
+	isUpdateStop(){
+		var isStop = Object.keys(this.clients).length <= 1;
+
+		return isStop;
+	}
+//---------------------------------------------------------------------
+//update
+	updateClientState(){
+
+		for (var id in this.clients){
+			if(this.clients[id].state == 'entry'){
+				this.clients[id].state = 'wait';
+			}
+		}
+		console.log("[ update ] update clients :" + Object.keys(this.clients).length);
+	}
+	updateMatching(){
+		this.matchingLogic(this.clients);
+		for (var id in this.clients){
+			if(this.clients[id].state == 'match'){
+				console.log(" matching :" + id);
+				this.sendMatchingInfo(id,this.clients[id].client);
+				this.clients[id].state = 'exit';
+			}
+		}
+		console.log("[ update ] update matching :" + Object.keys(this.clients).length);
+	}
+
+
+
 	
 //---------------------------------------------------------------------
 //callback
@@ -142,23 +148,7 @@ class MatchingServer extends Connection{
 		console.log(e);
 		
 	}
-//---------------------------------------------------------------------
-//send
-	sendConnectionCallback(id,client){
-		var send = {};
-		send.type = 'connect';
-		send.data = {};
-		send.data.id = id;
-		super.send(client,JSON.stringify(send));
-	}
-	sendMatchingInfo(id,client){
-		var send = {};
-		send.type = 'match';
-		send.data = {};
-		send.data.address = "ws://";
-		send.data.room = this.clients[id].room;
-		super.send(client,JSON.stringify(send));
-	}
+
 	//omit
 	/*
 	broadcastRollCall(){
@@ -169,40 +159,7 @@ class MatchingServer extends Connection{
 		send.data.id = id;
 	}*/
 
-//---------------------------------------------------------------------
-//updateTrigger (bool)
-	isUpdateStart(){
-		var isStart = Object.keys(this.clients).length > 1;
-		return isStart;
-	}
-	isUpdateStop(){
-		var isStop = Object.keys(this.clients).length <= 1;
 
-		return isStop;
-	}
-//---------------------------------------------------------------------
-//---------------------------------------------------------------------
-//update
-	updateClientState(){
-
-		for (var id in this.clients){
-			if(this.clients[id].state == 'entry'){
-				this.clients[id].state = 'wait';
-			}
-		}
-		console.log("[ update ] update clients :" + Object.keys(this.clients).length);
-	}
-	updateMatching(){
-		this.matchingLogic(this.clients);
-		for (var id in this.clients){
-			if(this.clients[id].state == 'match'){
-				console.log(" matching :" + id);
-				this.sendMatchingInfo(id,this.clients[id].client);
-				this.clients[id].state = 'exit';
-			}
-		}
-		console.log("[ update ] update matching :" + Object.keys(this.clients).length);
-	}
 //---------------------------------------------------------------------
 //---------------------------------------------------------------------
 	startUpdate(){
@@ -224,4 +181,4 @@ class MatchingServer extends Connection{
 	}
 }
 
-var ms = new MatchingServer({server: HTTPserver(WS_PORT)});
+var gs = new GameServer({server: HTTPserver(WS_PORT)});
