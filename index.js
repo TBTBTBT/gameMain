@@ -2,20 +2,12 @@ var Connection = require('connection');
 var HTTPserver = require('./client.js');
 var Game = require('./game.js')
 //GlobalDefine
-var WS_PORT = 3000;
+var WS_PORT = 4000;
 
-
+var Client = { state:'connect', client:'', room:''};
 //---------------------------------------------------------------------
-//MatchingServer
-//抽象化したい関数を上から順に書く
-//matchingLogic マッチングする際のロジック
-
-//クライアントのステートいちらん
-//connect 初回接続
-//entry   名前等初期情報受信後
-//wait    マッチング待ち
-//match   マッチング
-//exit    マッチング情報送信後
+//GameServer
+//マッチングサーバーからのリクエストで起動
 class GameServer extends Connection{
 //---------------------------------------------------------------------
 //constructor
@@ -31,14 +23,20 @@ class GameServer extends Connection{
 //クライアントからのmessageのtypeに対するレスポンス定義
 	responseDefine(){
 		this.response = {
-			connect: this.resConnect
+			connect: this.resConnect,
+			suconnect: this.sresConnect,
+			sumakeroom:this.sresMakeRoom
 		}
 	}
 //---------------------------------------------------------------------
 //response for request from server
 //サーバーからのリクエストのレスポンス
-
-	sresMakeRoom(room){
+	sresConnect(self,id,data){
+		//管理者権限
+		self.clients[id].state = 'superuser';
+	}
+	sresMakeRoom(self,id,data){
+		var room = data.room;
 		//新規部屋作成
 		self.rooms[room] = new Game();
 		console.log('[ sreq  ] make room :' + room);
@@ -83,35 +81,19 @@ class GameServer extends Connection{
 //---------------------------------------------------------------------
 //updateTrigger (bool)
 	isUpdateStart(){
-		var isStart = Object.keys(this.clients).length > 1;
+		var isStart = Object.keys(this.rooms).length > 1;
 		return isStart;
 	}
 	isUpdateStop(){
-		var isStop = Object.keys(this.clients).length <= 1;
+		var isStop = Object.keys(this.rooms).length <= 1;
 
 		return isStop;
 	}
 //---------------------------------------------------------------------
 //update
-	updateClientState(){
+	updateGame(){
 
-		for (var id in this.clients){
-			if(this.clients[id].state == 'entry'){
-				this.clients[id].state = 'wait';
-			}
-		}
-		console.log("[ update ] update clients :" + Object.keys(this.clients).length);
-	}
-	updateMatching(){
-		this.matchingLogic(this.clients);
-		for (var id in this.clients){
-			if(this.clients[id].state == 'match'){
-				console.log(" matching :" + id);
-				this.sendMatchingInfo(id,this.clients[id].client);
-				this.clients[id].state = 'exit';
-			}
-		}
-		console.log("[ update ] update matching :" + Object.keys(this.clients).length);
+		console.log("[ game  ] update game :" + Object.keys(this.clients).length);
 	}
 
 
@@ -120,11 +102,9 @@ class GameServer extends Connection{
 //---------------------------------------------------------------------
 //callback
 	onOpen(id,client,req){
-		this.clients[id] = new ClientFormat(client,'connect');
+		this.clients[id] = Object.create(Client);
+		this.clients[id].client = client;
 		this.sendConnectionCallback(id,client);
-		if(this.isUpdateStart()){
-			this.startUpdate();
-		}
 
 		console.log('[ client ] connected id:' + id);
 		console.log('[ client ] length :' + Object.keys(this.clients).length);
@@ -166,7 +146,7 @@ class GameServer extends Connection{
 		var my = this;
 		//console.log(this.timer);
 		if(this.timer === undefined){
-			this.timer = setInterval(function(){my.update(my);}, 1000);
+			this.timer = setInterval(function(){my.update(my);}, 200);
 		}
 	}
 	stopUpdate(){
@@ -175,8 +155,7 @@ class GameServer extends Connection{
 		this.timer = undefined;
 	}
 	update(self){
-		self.updateClientState();
-		self.updateMatching();
+		self.updateGame();
 		
 	}
 }

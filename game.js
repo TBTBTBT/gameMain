@@ -3,17 +3,12 @@
 
 var ws = require('ws');
 
+
+//---------------------------------------------------------------------
 //datadefine
 var Input 	  = { id:'', type:'input', strong:0, angle:0 frame:0};//input skip
 var Player 	  = { id:'', charge:0};
 var SendInput = { type: 'input', data:{ id:'', type:'input', strong:0, angle:0, frame:0} };
-/*実験
-var test = Object.create( Input);
-var test2 = Object.create( Input);
-test2.id = 'sse';
-test.id = 'eed';
-console.log(test2.id);
-*/
 
 /*いらなくなった
 class Player{
