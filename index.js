@@ -18,19 +18,61 @@ class GameServer extends Connection{
 		this.responseDefine();
 		//this.startUpdate();
 	}
+
+//---------------------------------------------------------------------
+//callback
+	onOpen(id,client,req){
+		this.clients[id] = Object.create(Client);
+		this.clients[id].client = client;
+		this.sendConnectionCallback(id,client);
+		if(this.isUpdateStart()){
+			this.startUpdate();
+		}
+		console.log('[ client ] connected id:' + id);
+		console.log('[ client ] length :' + Object.keys(this.clients).length);
+
+		//super.broadcast(id);
+	}
+	onMessage(id,client,message){
+		var obj = JSON.parse(message);
+		this.response[obj.type](this,id,obj.data);
+		console.log('[ client ] message from id:' + id + ' : ' + message);
+	}
+	onClose(id,client,address){
+		delete this.clients[id];
+		if(this.isUpdateStop()){
+			this.stopUpdate();
+		}
+		console.log('[ client ] disconnected id:' + id);
+		
+	}
+	onError(e){
+		console.log(e);
+		
+	}
+
+	//omit
+	/*
+	broadcastRollCall(){
+
+		var send = {};
+		send.type = 'rollcall';
+		send.data = {};
+		send.data.id = id;
+	}*/
+
 //---------------------------------------------------------------------
 //responseDefine
 //クライアントからのmessageのtypeに対するレスポンス定義
 	responseDefine(){
 		this.response = {
 			connect: this.resConnect,
-			suconnect: this.sresConnect,
-			sumakeroom:this.sresMakeRoom
 		}
 	}
 //---------------------------------------------------------------------
 //response for request from server
 //サーバーからのリクエストのレスポンス
+/*
 	sresConnect(self,id,data){
 		//管理者権限
 		self.clients[id].state = 'superuser';
@@ -41,7 +83,7 @@ class GameServer extends Connection{
 		self.rooms[room] = new Game();
 		console.log('[ sreq  ] make room :' + room);
 	}
-
+*/
 //---------------------------------------------------------------------
 //response
 //クライアントからのメッセージを処理する
@@ -54,13 +96,17 @@ class GameServer extends Connection{
 			return;
 		}
 		if(!self.rooms[room]){
-			return;
+			self.makeRoom(room);
 		}
 		self.clients[id].state = 'entry';
 		self.rooms[room].playerEntry(id);
 		console.log('[ client ] entry named :' + name);
 	}
-
+	makeRoom(room){
+		//新規部屋作成
+		this.rooms[room] = new Game();
+		console.log('[ sreq  ] make room :' + room);
+	}
 //---------------------------------------------------------------------
 //request
 //サーバーから呼びかける
@@ -98,46 +144,6 @@ class GameServer extends Connection{
 
 
 
-	
-//---------------------------------------------------------------------
-//callback
-	onOpen(id,client,req){
-		this.clients[id] = Object.create(Client);
-		this.clients[id].client = client;
-		this.sendConnectionCallback(id,client);
-
-		console.log('[ client ] connected id:' + id);
-		console.log('[ client ] length :' + Object.keys(this.clients).length);
-
-		//super.broadcast(id);
-	}
-	onMessage(id,client,message){
-		var obj = JSON.parse(message);
-		this.response[obj.type](this,id,obj.data);
-		console.log('[ client ] message from id:' + id + ' : ' + message);
-	}
-	onClose(id,client,address){
-		delete this.clients[id];
-		if(this.isUpdateStop()){
-			this.stopUpdate();
-		}
-		console.log('[ client ] disconnected id:' + id);
-		
-	}
-	onError(e){
-		console.log(e);
-		
-	}
-
-	//omit
-	/*
-	broadcastRollCall(){
-
-		var send = {};
-		send.type = 'rollcall';
-		send.data = {};
-		send.data.id = id;
-	}*/
 
 
 //---------------------------------------------------------------------
