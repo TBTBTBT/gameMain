@@ -5,6 +5,10 @@ var Game = require('./game.js')
 var WS_PORT = 4000;
 
 var Client = { state:'connect', client:'', room:''};
+var RecieveConnect ={ name:'' ,room:'' };
+var SendConnect   = { type: 'connect', data: {id:'' } };
+var SendGameReady = { type: 'ready', data: { member:[], waitsec:5 } };
+var SendGameStart = { type: 'start', data: {} };
 //---------------------------------------------------------------------
 //GameServer
 //マッチングサーバーからのリクエストで起動
@@ -71,45 +75,54 @@ class GameServer extends Connection{
 	}
 //---------------------------------------------------------------------
 //response for request from server
-//サーバーからのリクエストのレスポンス
-/*
-	sresConnect(self,id,data){
-		//管理者権限
-		self.clients[id].state = 'superuser';
-	}
-	sresMakeRoom(self,id,data){
-		var room = data.room;
-		//新規部屋作成
-		self.rooms[room] = new Game();
-		console.log('[ sreq  ] make room :' + room);
-	}
-*/
+//サーバー間通信
 //---------------------------------------------------------------------
 //response
 //クライアントからのメッセージを処理する
 	resConnect(self,id,data){
-		var name = data.name;
-		var room = data.room;
+		var obj = Object.create(RecieveConnect);
+		obj.name = data.name;
+		obj.room = data.room;
 
-		if(room === undefined || room == ''){
+		if(obj.room === undefined || obj.room == ''){
 			//不正アクセス(部屋名なし)制限
 			return;
 		}
-		if(!self.rooms[room]){
-			self.makeRoom(room);
+		if(!self.rooms[obj.room]){
+			self.makeRoom(obj.room);
 		}
 		self.clients[id].state = 'entry';
-		self.rooms[room].playerEntry(id);
-		console.log('[ client ] entry named :' + name);
+		self.rooms[obj.room].playerEntry(id);
+		if(self.rooms[obj.room].isPlayerMax()){
+			self.reqGameReady(obj.room);
+		}
+		console.log('[ client ] entry named :' + obj.name);
 	}
-	makeRoom(room){
-		//新規部屋作成
-		this.rooms[room] = new Game();
-		console.log('[ sreq  ] make room :' + room);
-	}
+
 //---------------------------------------------------------------------
 //request
 //サーバーから呼びかける
+	reqGameReady(room){
+		var obj = Object.create(SendGameReady);
+		for(id in this.clients){
+			if(this.clients[id].room == room){
+				obj.data.member.push(id);
+			}
+		}
+		for(id in this.clients){
+			if(this.clients[id].room == room){
+				super.send(this.clients[id].client,JSON.stringify(obj));
+			}
+		}
+	}
+	reqGameStart(room){
+		var obj = Object.create(SendGameStart);
+		for(id in this.clients){
+			if(this.clients[id].room == room){
+				super.send(this.clients[id].client,JSON.stringify(obj));
+			}
+		}
+	}
 	/*
 	reqRollCall(){
 		//closeでまかなえなかった場合に作成する
@@ -118,9 +131,8 @@ class GameServer extends Connection{
 //---------------------------------------------------------------------
 //send
 	sendConnectionCallback(id,client){
-		var send = {};
+		var send = Object.create(SendConnect);
 		send.type = 'connect';
-		send.data = {};
 		send.data.id = id;
 		super.send(client,JSON.stringify(send));
 	}
@@ -163,6 +175,13 @@ class GameServer extends Connection{
 	update(self){
 		self.updateGame();
 		
+	}
+//---------------------------------------------------------------------
+//utility
+	makeRoom(room){
+		//新規部屋作成
+		this.rooms[room] = new Game();
+		console.log('[ sreq  ] make room :' + room);
 	}
 }
 

@@ -3,10 +3,10 @@
 
 var ws = require('ws');
 
-
+var PLAYER_NUM = 2;
 //---------------------------------------------------------------------
 //datadefine
-var Input 	  = { id:'', type:'input', strong:0, angle:0 frame:0};//input skip
+var Input 	  = { id:'', type:'input', strong:0, angle:0 ,frame:0};//input skip
 var Player 	  = { id:'', charge:0};
 var SendInput = { type: 'input', data:{ id:'', type:'input', strong:0, angle:0, frame:0} };
 
@@ -73,6 +73,9 @@ class GameMain {
 	playerEntry(id,client){
 		this.player[id] = new Player(id);
 		this.client[id] = client;
+	}
+	isPlayerMax(){
+		return Object.keys(this.player).length >= PLAYER_NUM;
 	}
 }
 
