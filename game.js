@@ -4,10 +4,11 @@
 var ws = require('ws');
 
 var PLAYER_NUM = 2;
+var MAX_TIME = 150;
 //---------------------------------------------------------------------
 //datadefine
 var Input 	  = { id:'', type:'input', strong:0, angle:0 ,frame:0};//input skip
-var Player 	  = { id:'', charge:0};
+var Player 	  = { id:'', input: {} ,charge:0};
 var SendInput = { type: 'input', data:{ id:'', type:'input', strong:0, angle:0, frame:0} };
 
 /*いらなくなった
@@ -44,22 +45,63 @@ class Player{
 class GameMain {
 	constructor(){
 		this.player = {};
-		this.client = {};
-		this.frame = 0;
-		this.requestInput = [];
+		this.clients = {};
+		this.frame = -30;
+		this.cache = [];
+		this.log = [];
+		this.start = false;
 	}
 	update(){
 		this.frame += 1;
+		if(this.frame > 0){
+			this.processInput();
+			this.broadcastCache();
+		}
+
+		return !this.start && this.frame >= 0;
+	}
+	checkFinish(){
+
+			return this.frame > MAX_TIME;
 
 	}
+	processInput(){
+		for (var id in this.player){
+			if(this.player[id].input === undefined){
+				continue;
+			}
+			var send = this.player[id].input;
+			send.frame = this.frame + 3;
+			var format = {};
+			format.type = 'input';
+			format.data = send;
+			this.cache.push(JSON.stringify(format));
+			this.log.push(JSON.stringify(format));
+			this.player[id].input = undefined;
+		}
+	}
+	broadcastCache(){
+		for(var i = 0;i < this.cache.length; i++){
+			this.broadcast(this.cache[i]);
+		}
+		this.cache = [];
+	}
+	broadcast(msg){
+		for (var id in this.clients){
+			this.clients[id].send(msg);
+		}
+	}
 	//【データ型未対応】
-	inputCalc(id,type,strong,angle){
+	input(id,type,strong,angle){
+		if(this.player[id].input !== undefined){
+			return;
+		}
 		var obj = Object.create(Input);
 		obj.id = id;
 		obj.strong = strong;
 		obj.angle = angle;
-		obj.frame = this.frame + 2;
-		this.requestInput.push(obj);
+		//obj.frame = this.frame + 3;
+		this.player[id].input = obj;
 	}
 	//【データ型未対応】
 	getData(data){
@@ -71,8 +113,14 @@ class GameMain {
 
 	}
 	playerEntry(id,client){
-		this.player[id] = new Player(id);
-		this.client[id] = client;
+		if(this.isPlayerMax()){
+			return;
+		}
+		this.player[id] = Object.create(Player);
+		this.player[id].id = id;
+		this.player[id].input = undefined;
+		this.clients[id] = client;
+
 	}
 	isPlayerMax(){
 		return Object.keys(this.player).length >= PLAYER_NUM;

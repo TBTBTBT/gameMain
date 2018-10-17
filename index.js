@@ -6,6 +6,7 @@ var WS_PORT = 4000;
 
 var Client = { state:'connect', client:'', room:''};
 var RecieveConnect ={ name:'' ,room:'' };
+var RecieveInput  = { id:'', type:'input', strong:0, angle:0 ,frame:0};
 var SendConnect   = { type: 'connect', data: {id:'' } };
 var SendGameReady = { type: 'ready', data: { member:[], waitsec:5 } };
 var SendGameStart = { type: 'start', data: {} };
@@ -29,9 +30,7 @@ class GameServer extends Connection{
 		this.clients[id] = Object.create(Client);
 		this.clients[id].client = client;
 		this.sendConnectionCallback(id,client);
-		if(this.isUpdateStart()){
-			this.startUpdate();
-		}
+
 		console.log('[ client ] connected id:' + id);
 		console.log('[ client ] length :' + Object.keys(this.clients).length);
 
@@ -39,14 +38,13 @@ class GameServer extends Connection{
 	}
 	onMessage(id,client,message){
 		var obj = JSON.parse(message);
-		this.response[obj.type](this,id,obj.data);
+		if(this.response[obj.type]){
+			this.response[obj.type](this,id,obj.data);
+		}
 		console.log('[ client ] message from id:' + id + ' : ' + message);
 	}
 	onClose(id,client,address){
 		delete this.clients[id];
-		if(this.isUpdateStop()){
-			this.stopUpdate();
-		}
 		console.log('[ client ] disconnected id:' + id);
 		
 	}
@@ -71,6 +69,7 @@ class GameServer extends Connection{
 	responseDefine(){
 		this.response = {
 			connect: this.resConnect,
+			input: this.resInput,
 		}
 	}
 //---------------------------------------------------------------------
@@ -95,21 +94,34 @@ class GameServer extends Connection{
 		self.rooms[obj.room].playerEntry(id);
 		if(self.rooms[obj.room].isPlayerMax()){
 			self.reqGameReady(obj.room);
+			if(self.isUpdateStart()){
+				self.startUpdate();
+			}
 		}
+
 		console.log('[ client ] entry named :' + obj.name);
 	}
-
+	resInput(self,id,data){
+		var room = self.clients[id].room;
+		var type = data.type;
+		var str = data.strong;
+		var ang = data.angle;
+		if(self.rooms[room]){
+			self.rooms[room].input(id,type,str,ang);
+		}
+		console.log('[ client ] input :' + id);
+	}
 //---------------------------------------------------------------------
 //request
 //サーバーから呼びかける
 	reqGameReady(room){
 		var obj = Object.create(SendGameReady);
-		for(id in this.clients){
+		for(var id in this.clients){
 			if(this.clients[id].room == room){
 				obj.data.member.push(id);
 			}
 		}
-		for(id in this.clients){
+		for(var id in this.clients){
 			if(this.clients[id].room == room){
 				super.send(this.clients[id].client,JSON.stringify(obj));
 			}
@@ -117,7 +129,7 @@ class GameServer extends Connection{
 	}
 	reqGameStart(room){
 		var obj = Object.create(SendGameStart);
-		for(id in this.clients){
+		for(var id in this.clients){
 			if(this.clients[id].room == room){
 				super.send(this.clients[id].client,JSON.stringify(obj));
 			}
@@ -133,25 +145,37 @@ class GameServer extends Connection{
 	sendConnectionCallback(id,client){
 		var send = Object.create(SendConnect);
 		send.type = 'connect';
+		send.data = {};
 		send.data.id = id;
 		super.send(client,JSON.stringify(send));
 	}
 //---------------------------------------------------------------------
 //updateTrigger (bool)
 	isUpdateStart(){
-		var isStart = Object.keys(this.rooms).length > 1;
+		var isStart = Object.keys(this.rooms).length >= 1;
 		return isStart;
 	}
 	isUpdateStop(){
-		var isStop = Object.keys(this.rooms).length <= 1;
+		var isStop = Object.keys(this.rooms).length < 1;
 
 		return isStop;
 	}
 //---------------------------------------------------------------------
 //update
 	updateGame(){
-
-		console.log("[ game  ] update game :" + Object.keys(this.clients).length);
+		for(var id in this.rooms){
+			if(this.rooms[id].update()){
+				this.reqGameStart(id);
+				this.rooms[id].start = true;
+			}
+			if(this.rooms[id].checkFinish()){
+				delete this.rooms[id];
+				if(this.isUpdateStop()){
+					this.stopUpdate();
+				}
+			}
+		}
+		console.log("[ game  ] update game :" + Object.keys(this.rooms).length);
 	}
 
 
