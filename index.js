@@ -91,6 +91,7 @@ class GameServer extends Connection{
 			self.makeRoom(obj.room);
 		}
 		self.clients[id].state = 'entry';
+		self.clients[id].room = obj.room;
 		self.rooms[obj.room].playerEntry(id);
 		if(self.rooms[obj.room].isPlayerMax()){
 			self.reqGameReady(obj.room);
@@ -149,6 +150,9 @@ class GameServer extends Connection{
 		send.data.id = id;
 		super.send(client,JSON.stringify(send));
 	}
+	sendMessage(id,msg){
+		super.send(this.clients[id].client,msg);
+	}
 //---------------------------------------------------------------------
 //updateTrigger (bool)
 	isUpdateStart(){
@@ -204,7 +208,7 @@ class GameServer extends Connection{
 //utility
 	makeRoom(room){
 		//新規部屋作成
-		this.rooms[room] = new Game();
+		this.rooms[room] = new Game(this);
 		console.log('[ sreq  ] make room :' + room);
 	}
 }

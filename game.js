@@ -43,13 +43,14 @@ class Player{
 //5.入力があった場合、即座に受付フレーム数を計算し、そのフレームの時に代入する また、その結果をbroadcastする。
 //
 class GameMain {
-	constructor(){
+	constructor(server){
 		this.player = {};
-		this.clients = {};
+		//this.clients = {};
 		this.frame = -30;
 		this.cache = [];
 		this.log = [];
 		this.start = false;
+		this.server = server;
 	}
 	update(){
 		this.frame += 1;
@@ -87,21 +88,26 @@ class GameMain {
 		this.cache = [];
 	}
 	broadcast(msg){
-		for (var id in this.clients){
-			this.clients[id].send(msg);
+		for (var id in this.player){
+			if(this.server.clients[id] === undefined){
+				continue;
+			}
+			this.server.sendMessage(id,msg);
 		}
 	}
 	//【データ型未対応】
 	input(id,type,strong,angle){
+		
 		if(this.player[id].input !== undefined){
 			return;
 		}
-		var obj = Object.create(Input);
-		obj.id = id;
-		obj.strong = strong;
-		obj.angle = angle;
-		//obj.frame = this.frame + 3;
-		this.player[id].input = obj;
+		if(type == "bullet" ){
+			var obj = Object.create(Input);
+			obj.id = id;
+			obj.strong = strong;
+			obj.angle = angle;
+			this.player[id].input = obj;
+		}
 	}
 	//【データ型未対応】
 	getData(data){
@@ -112,14 +118,14 @@ class GameMain {
 		input.angle = data.angle;
 
 	}
-	playerEntry(id,client){
+	playerEntry(id){
 		if(this.isPlayerMax()){
 			return;
 		}
 		this.player[id] = Object.create(Player);
 		this.player[id].id = id;
 		this.player[id].input = undefined;
-		this.clients[id] = client;
+		//this.clients[id] = client;
 
 	}
 	isPlayerMax(){
