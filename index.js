@@ -8,7 +8,7 @@ var Client = { state:'connect', client:'', room:''};
 var RecieveConnect ={ name:'' ,room:'' };
 var RecieveInput  = { id:'', type:'input', strong:0, angle:0 ,frame:0};
 var SendConnect   = { type: 'connect', data: {id:'' } };
-var SendGameReady = { type: 'ready', data: { member:[], waitsec:5 } };
+var SendGameReady = { type: 'ready', data: { member:[] } };
 var SendGameStart = { type: 'start', data: {} };
 //---------------------------------------------------------------------
 //GameServer
@@ -117,6 +117,10 @@ class GameServer extends Connection{
 //サーバーから呼びかける
 	reqGameReady(room){
 		var obj = Object.create(SendGameReady);
+		obj.type = 'ready';
+		obj.data = {};
+		obj.data.member = [];
+				//obj.data = {};
 		for(var id in this.clients){
 			if(this.clients[id].room == room){
 				obj.data.member.push(id);
@@ -125,16 +129,21 @@ class GameServer extends Connection{
 		for(var id in this.clients){
 			if(this.clients[id].room == room){
 				super.send(this.clients[id].client,JSON.stringify(obj));
+				console.log("Ready " + id);
 			}
 		}
+		
 	}
 	reqGameStart(room){
 		var obj = Object.create(SendGameStart);
+		obj.type = 'start';
+		obj.data = {};
 		for(var id in this.clients){
 			if(this.clients[id].room == room){
 				super.send(this.clients[id].client,JSON.stringify(obj));
 			}
 		}
+		console.log("Start");
 	}
 	/*
 	reqRollCall(){
@@ -167,6 +176,7 @@ class GameServer extends Connection{
 //---------------------------------------------------------------------
 //update
 	updateGame(){
+		//var sample = "";
 		for(var id in this.rooms){
 			if(this.rooms[id].update()){
 				this.reqGameStart(id);
@@ -178,8 +188,9 @@ class GameServer extends Connection{
 					this.stopUpdate();
 				}
 			}
+		//	sample = id;
 		}
-		console.log("[ game  ] update game :" + Object.keys(this.rooms).length);
+		//console.log("[ game  ] update game :" + this.rooms[sample].frame);//Object.keys(this.rooms).length);
 	}
 
 

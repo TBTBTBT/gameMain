@@ -9,7 +9,7 @@ var MAX_TIME = 150;
 //datadefine
 var Input 	  = { id:'', type:'input', strong:0, angle:0 ,frame:0};//input skip
 var Player 	  = { id:'', input: {} ,charge:0};
-var SendInput = { type: 'input', data:{ id:'', type:'input', strong:0, angle:0, frame:0} };
+var SendInput = { type: 'input', data:{ id:'', type:'input', strong:0, angle:0, frame:0, number:0} };
 
 /*いらなくなった
 class Player{
@@ -73,6 +73,7 @@ class GameMain {
 			}
 			var send = this.player[id].input;
 			send.frame = this.frame + 3;
+			send.number = this.log.length;
 			var format = {};
 			format.type = 'input';
 			format.data = send;
@@ -101,13 +102,14 @@ class GameMain {
 		if(this.player[id].input !== undefined){
 			return;
 		}
-		if(type == "bullet" ){
+		//if(type == "bullet" ){
 			var obj = Object.create(Input);
 			obj.id = id;
 			obj.strong = strong;
 			obj.angle = angle;
+			obj.type = type;
 			this.player[id].input = obj;
-		}
+		//}
 	}
 	//【データ型未対応】
 	getData(data){
