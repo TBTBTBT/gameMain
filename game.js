@@ -72,7 +72,7 @@ class GameMain {
 				continue;
 			}
 			var send = this.player[id].input;
-			send.frame = this.frame + 3;
+			send.frame = this.frame + 2;
 			send.number = this.log.length;
 			var format = {};
 			format.type = 'input';
