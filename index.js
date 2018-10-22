@@ -44,6 +44,7 @@ class GameServer extends Connection{
 		console.log('[ client ] message from id:' + id + ' : ' + message);
 	}
 	onClose(id,client,address){
+		this.clients[id].room;
 		delete this.clients[id];
 		console.log('[ client ] disconnected id:' + id);
 		
@@ -95,9 +96,9 @@ class GameServer extends Connection{
 		self.rooms[obj.room].playerEntry(id);
 		if(self.rooms[obj.room].isPlayerMax()){
 			self.reqGameReady(obj.room);
-			if(self.isUpdateStart()){
-				self.startUpdate();
-			}
+			//if(self.isUpdateStart()){
+			//	self.startUpdate();
+			//}
 		}
 
 		console.log('[ client ] entry named :' + obj.name);
@@ -132,6 +133,8 @@ class GameServer extends Connection{
 				console.log("Ready " + id);
 			}
 		}
+		var my = this;
+		setTimeout(function(){my.reqGameStart(room)},2000);
 		
 	}
 	reqGameStart(room){
@@ -143,7 +146,10 @@ class GameServer extends Connection{
 				super.send(this.clients[id].client,JSON.stringify(obj));
 			}
 		}
+		this.rooms[room].startGame();
 		console.log("Start");
+		var my = this;
+		setTimeout(function(){my.deleteRoom(room)},20000);
 	}
 	/*
 	reqRollCall(){
@@ -175,6 +181,7 @@ class GameServer extends Connection{
 	}
 //---------------------------------------------------------------------
 //update
+/*
 	updateGame(){
 		//var sample = "";
 		for(var id in this.rooms){
@@ -212,15 +219,19 @@ class GameServer extends Connection{
 		this.timer = undefined;
 	}
 	update(self){
-		self.updateGame();
+		//self.updateGame();
 		
-	}
+	}*/
 //---------------------------------------------------------------------
 //utility
 	makeRoom(room){
 		//新規部屋作成
 		this.rooms[room] = new Game(this);
 		console.log('[ sreq  ] make room :' + room);
+	}
+	deleteRoom(room){
+		this.rooms[room].closeGame();
+		delete this.rooms[room];
 	}
 }
 

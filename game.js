@@ -41,16 +41,112 @@ class Player{
 //3.両方接続確認で開始 そうでなければエラーを返す
 //4.0.2secおきにupdateを呼び出し ゲーム計算をおこなう frame数も記録する
 //5.入力があった場合、即座に受付フレーム数を計算し、そのフレームの時に代入する また、その結果をbroadcastする。
-//
+//!20181022 ゲーム計算を行わない UNIX時間を利用して計算
 class GameMain {
 	constructor(server){
 		this.player = {};
-		//this.clients = {};
-		this.frame = -30;
-		this.cache = [];
+		//this.frame = -30;
+		//this.cache = [];
+
+		this.state = 'ready';
 		this.log = [];
 		this.start = false;
 		this.server = server;
+	}
+	startGame(){
+		this.state = 'start';
+		this.time = Date.now();
+	}
+
+	broadcast(msg){
+		for (var id in this.player){
+			if(this.server.clients[id] === undefined){
+				continue;
+			}
+			this.server.sendMessage(id,msg);
+		}
+	}
+	input(id,type,strong,angle){
+		if(this.state != 'start'){
+			return;
+		}
+		if(this.player[id].input !== undefined){
+			return;
+		}
+		//if(type == "bullet" ){
+			var obj = Object.create(Input);
+			obj.id = id;
+			obj.strong = strong;
+			obj.angle = angle;
+			obj.type = type;
+			this.processInput(obj);
+			//this.player[id].input = obj;
+		//}
+	}
+	processInput(input){
+		var send = input;
+		var frame = parseInt( ( Date.now() - this.time ) / 20 );
+		var format = {};
+		send.frame = frame + 40;
+		send.number = this.log.length;
+		format.type = 'input';
+		format.data = send;
+		this.broadcast(JSON.stringify(format));
+		//this.cache.push(JSON.stringify(format));
+		this.log.push(JSON.stringify(format));
+	}
+
+	playerEntry(id){
+		if(this.isPlayerMax()){
+			return;
+		}
+		this.player[id] = Object.create(Player);
+		this.player[id].id = id;
+		this.player[id].input = undefined;
+		//this.clients[id] = client;
+
+	}
+	isPlayerMax(){
+		return Object.keys(this.player).length >= PLAYER_NUM;
+	}
+	closeGame(){
+		var format = {};
+		format.type = 'end';
+		this.broadcast(JSON.stringify(format));
+	}
+	//未使用
+	/*
+	getData(data){
+		var id = data.id;
+		var input = {};
+		input.type = data.type;
+		input.strong = data.strong;
+		input.angle = data.angle;
+
+	}
+	broadcastCache(){
+		for(var i = 0;i < this.cache.length; i++){
+			this.broadcast(this.cache[i]);
+		}
+		this.cache = [];
+	}
+	processInput(){
+
+		for (var id in this.player){
+			if(this.player[id].input === undefined){
+				continue;
+			}
+			var send = this.player[id].input;
+			var frame = parseInt( ( Date.now() - this.time ) / 20 );
+			send.frame = frame + 20;
+			send.number = this.log.length;
+			var format = {};
+			format.type = 'input';
+			format.data = send;
+			this.cache.push(JSON.stringify(format));
+			this.log.push(JSON.stringify(format));
+			this.player[id].input = undefined;
+		}
 	}
 	update(){
 		this.frame += 1;
@@ -65,74 +161,14 @@ class GameMain {
 
 			return this.frame > MAX_TIME;
 
-	}
-	processInput(){
-		for (var id in this.player){
-			if(this.player[id].input === undefined){
-				continue;
-			}
-			var send = this.player[id].input;
-			send.frame = this.frame + 2;
-			send.number = this.log.length;
-			var format = {};
-			format.type = 'input';
-			format.data = send;
-			this.cache.push(JSON.stringify(format));
-			this.log.push(JSON.stringify(format));
-			this.player[id].input = undefined;
-		}
-	}
-	broadcastCache(){
-		for(var i = 0;i < this.cache.length; i++){
-			this.broadcast(this.cache[i]);
-		}
-		this.cache = [];
-	}
-	broadcast(msg){
-		for (var id in this.player){
-			if(this.server.clients[id] === undefined){
-				continue;
-			}
-			this.server.sendMessage(id,msg);
-		}
-	}
-	//【データ型未対応】
-	input(id,type,strong,angle){
-		
-		if(this.player[id].input !== undefined){
-			return;
-		}
-		//if(type == "bullet" ){
-			var obj = Object.create(Input);
-			obj.id = id;
-			obj.strong = strong;
-			obj.angle = angle;
-			obj.type = type;
-			this.player[id].input = obj;
-		//}
-	}
-	//【データ型未対応】
-	getData(data){
-		var id = data.id;
-		var input = {};
-		input.type = data.type;
-		input.strong = data.strong;
-		input.angle = data.angle;
+	}*/
 
-	}
-	playerEntry(id){
-		if(this.isPlayerMax()){
-			return;
-		}
-		this.player[id] = Object.create(Player);
-		this.player[id].id = id;
-		this.player[id].input = undefined;
-		//this.clients[id] = client;
+	
+	
+	//【データ型未対応】
 
-	}
-	isPlayerMax(){
-		return Object.keys(this.player).length >= PLAYER_NUM;
-	}
+	//【データ型未対応】
+
 }
 
 module.exports = GameMain;
