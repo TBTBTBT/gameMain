@@ -4,11 +4,12 @@
 var ws = require('ws');
 
 var PLAYER_NUM = 2;
-var MAX_TIME = 150;
+var ADD_FRAME = 20;
+var TIME_DIVISION = 20;//1フレームの長さ 1000 / x
 //---------------------------------------------------------------------
 //datadefine
-var Input 	  = { id:'', type:'input', strong:0, angle:0 ,frame:0};//input skip
-var Player 	  = { id:'', input: {} ,charge:0};
+var Input 	  = { pid:0, type:'input', strong:0, angle:0 ,frame:0};//input skip
+var Player 	  = { id:'', pid:0 ,charge:0};
 var SendInput = { type: 'input', data:{ id:'', type:'input', strong:0, angle:0, frame:0, number:0} };
 
 /*いらなくなった
@@ -70,12 +71,12 @@ class GameMain {
 		if(this.state != 'start'){
 			return;
 		}
-		if(this.player[id].input !== undefined){
-			return;
-		}
+		//if(this.player[id].input !== undefined){
+		//	return;
+		//}
 		//if(type == "bullet" ){
 			var obj = Object.create(Input);
-			obj.id = id;
+			obj.pid = this.player[id].pid;
 			obj.strong = strong;
 			obj.angle = angle;
 			obj.type = type;
@@ -85,9 +86,9 @@ class GameMain {
 	}
 	processInput(input){
 		var send = input;
-		var frame = parseInt( ( Date.now() - this.time ) / 20 );
+		var frame = parseInt( ( Date.now() - this.time ) / TIME_DIVISION  );
 		var format = {};
-		send.frame = frame + 40;
+		send.frame = frame + ADD_FRAME;
 		send.number = this.log.length;
 		format.type = 'input';
 		format.data = send;
@@ -102,7 +103,8 @@ class GameMain {
 		}
 		this.player[id] = Object.create(Player);
 		this.player[id].id = id;
-		this.player[id].input = undefined;
+		this.player[id].pid = Object.keys(this.player).length;
+		//this.player[id].input = undefined;
 		//this.clients[id] = client;
 
 	}

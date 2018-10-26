@@ -124,7 +124,10 @@ class GameServer extends Connection{
 				//obj.data = {};
 		for(var id in this.clients){
 			if(this.clients[id].room == room){
-				obj.data.member.push(id);
+				var mem = {};
+				mem.id = id;
+				mem.pid = this.rooms[room].player[id].pid;
+				obj.data.member.push(mem);
 			}
 		}
 		for(var id in this.clients){
