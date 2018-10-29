@@ -5,7 +5,8 @@ var ws = require('ws');
 
 var PLAYER_NUM = 2;
 var ADD_FRAME = 20;
-var TIME_DIVISION = 20;//1フレームの長さ 1000 / x
+var TIME_DIVISION = 20;//1フレームの長さ (1000 / x) UNIXタイム計算に必要
+var GAME_LENGTH = 100000;//1ゲームの長さ(ミリ秒)
 //---------------------------------------------------------------------
 //datadefine
 var Input 	  = { pid:0, type:'input', strong:0, angle:0 ,frame:0};//input skip
@@ -45,14 +46,17 @@ class Player{
 //!20181022 ゲーム計算を行わない UNIX時間を利用して計算
 class GameMain {
 	constructor(server){
+		this.rule ={};
 		this.player = {};
-		//this.frame = -30;
-		//this.cache = [];
-
 		this.state = 'ready';
 		this.log = [];
 		this.start = false;
 		this.server = server;
+		this.setRule();
+	}
+	setRule(){
+		this.rule.time = GAME_LENGTH;
+		this.rule.add = ADD_FRAME;
 	}
 	startGame(){
 		this.state = 'start';

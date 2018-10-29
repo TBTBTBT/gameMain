@@ -4,11 +4,13 @@ var Game = require('./game.js')
 //GlobalDefine
 var WS_PORT = 4000;
 
+
+
 var Client = { state:'connect', client:'', room:''};
 var RecieveConnect ={ name:'' ,room:'' };
 var RecieveInput  = { id:'', type:'input', strong:0, angle:0 ,frame:0};
 var SendConnect   = { type: 'connect', data: {id:'' } };
-var SendGameReady = { type: 'ready', data: { member:[] } };
+var SendGameReady = { type: 'ready', data: { member:[], rule:{time:0, add:0}} };
 var SendGameStart = { type: 'start', data: {} };
 //---------------------------------------------------------------------
 //GameServer
@@ -118,8 +120,10 @@ class GameServer extends Connection{
 //サーバーから呼びかける
 	reqGameReady(room){
 		var obj = Object.create(SendGameReady);
+		var rule = {};
 		obj.type = 'ready';
 		obj.data = {};
+		obj.data.rule = this.rooms[room].rule;
 		obj.data.member = [];
 				//obj.data = {};
 		for(var id in this.clients){
@@ -152,7 +156,7 @@ class GameServer extends Connection{
 		this.rooms[room].startGame();
 		console.log("Start");
 		var my = this;
-		setTimeout(function(){my.deleteRoom(room)},20000);
+		setTimeout(function(){my.deleteRoom(room)},this.rooms[room].rule.time);
 	}
 	/*
 	reqRollCall(){
