@@ -1,5 +1,5 @@
 var Connection = require('connection');
-var HTTPserver = require('./client.js');
+//var HTTPserver = require('./client.js');
 var Game = require('./game.js')
 //GlobalDefine
 var WS_PORT = 4000;
@@ -242,4 +242,4 @@ class GameServer extends Connection{
 	}
 }
 
-var gs = new GameServer({server: HTTPserver(WS_PORT)});
+var gs = new GameServer({port:(process.env.PORT || WS_PORT)});
