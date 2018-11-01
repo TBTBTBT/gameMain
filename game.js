@@ -4,7 +4,7 @@
 var ws = require('ws');
 
 var PLAYER_NUM = 2;
-var ADD_FRAME = 20;
+var ADD_FRAME = 10;
 var TIME_DIVISION = 20;//1フレームの長さ (1000 / x) UNIXタイム計算に必要
 var GAME_LENGTH = 100000;//1ゲームの長さ(ミリ秒)
 //---------------------------------------------------------------------
